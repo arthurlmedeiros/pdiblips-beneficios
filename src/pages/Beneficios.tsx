@@ -5,14 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import BeneficioForm from "@beneficios/components/beneficios/BeneficioForm";
 import ImportBeneficiosDialog from "@beneficios/components/beneficios/ImportBeneficiosDialog";
+import BeneficioRolesPanel from "@beneficios/components/beneficios/BeneficioRolesPanel";
+import ColaboradorOverridesPanel from "@beneficios/components/beneficios/ColaboradorOverridesPanel";
+import MeusBeneficios from "@beneficios/components/beneficios/MeusBeneficios";
 import { Plus, Upload, Pencil, Trash2 } from "lucide-react";
 
 const Beneficios = () => {
   const { beneficios, isLoading, insert, update, remove, toggleAtivo, insertMany } = useBeneficios();
-  const { isAdmin } = useAuth();
+  const { isAdmin, hasRole } = useAuth();
+  const isAdminOrCeo = isAdmin || hasRole("admin_ceo");
 
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -35,27 +41,20 @@ const Beneficios = () => {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display font-bold text-2xl text-foreground">Repositório de Benefícios</h1>
-          <p className="text-muted-foreground text-sm mt-1">Gestão de benefícios da empresa</p>
-        </div>
-        {isAdmin && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setImportOpen(true)}>
-              <Upload className="h-4 w-4 mr-2" />Importar Documento
-            </Button>
-            <Button onClick={() => { setEditing(null); setFormOpen(true); }}>
-              <Plus className="h-4 w-4 mr-2" />Adicionar
-            </Button>
-          </div>
-        )}
-      </div>
-
+  const catalogoContent = (
+    <>
       {isLoading ? (
-        <p className="text-muted-foreground text-center py-8">Carregando...</p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader><Skeleton className="h-5 w-3/4" /></CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-4 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : beneficios.length === 0 ? (
         <div className="h-[400px] rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground">
           Nenhum benefício cadastrado
@@ -108,6 +107,54 @@ const Beneficios = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display font-bold text-2xl text-foreground">Repositório de Benefícios</h1>
+          <p className="text-muted-foreground text-sm mt-1">Gestão de benefícios da empresa</p>
+        </div>
+        {isAdmin && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />Importar Documento
+            </Button>
+            <Button onClick={() => { setEditing(null); setFormOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />Adicionar
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {!isAdminOrCeo ? (
+        <MeusBeneficios />
+      ) : (
+        <Tabs defaultValue="catalogo">
+          <TabsList>
+            <TabsTrigger value="catalogo">Catálogo</TabsTrigger>
+            <TabsTrigger value="atribuicoes">Atribuições</TabsTrigger>
+            <TabsTrigger value="meus">Meus Benefícios</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="catalogo" className="space-y-4 mt-4">
+            {catalogoContent}
+          </TabsContent>
+
+          <TabsContent value="atribuicoes" className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <BeneficioRolesPanel />
+              <ColaboradorOverridesPanel />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="meus" className="mt-4">
+            <MeusBeneficios />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };

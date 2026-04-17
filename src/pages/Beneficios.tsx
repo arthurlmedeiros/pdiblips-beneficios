@@ -13,6 +13,7 @@ import ImportBeneficiosDialog from "@beneficios/components/beneficios/ImportBene
 import BeneficioRolesPanel from "@beneficios/components/beneficios/BeneficioRolesPanel";
 import ColaboradorOverridesPanel from "@beneficios/components/beneficios/ColaboradorOverridesPanel";
 import MeusBeneficios from "@beneficios/components/beneficios/MeusBeneficios";
+import EstudoMercado from "@beneficios/components/beneficios/EstudoMercado";
 import { Plus, Upload, Pencil, Trash2 } from "lucide-react";
 
 const Beneficios = () => {
@@ -137,6 +138,7 @@ const Beneficios = () => {
             <TabsTrigger value="catalogo">Catálogo</TabsTrigger>
             <TabsTrigger value="atribuicoes">Atribuições</TabsTrigger>
             <TabsTrigger value="meus">Meus Benefícios</TabsTrigger>
+            <TabsTrigger value="estudo">Estudo de Mercado</TabsTrigger>
           </TabsList>
 
           <TabsContent value="catalogo" className="space-y-4 mt-4">
@@ -152,6 +154,10 @@ const Beneficios = () => {
 
           <TabsContent value="meus" className="mt-4">
             <MeusBeneficios />
+          </TabsContent>
+
+          <TabsContent value="estudo" className="mt-4">
+            <EstudoMercado />
           </TabsContent>
         </Tabs>
       )}

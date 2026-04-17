@@ -12,23 +12,27 @@ const MeusBeneficios = () => {
   const { data: meusOverrides = [], isLoading: isLoadingOverrides } = useQuery({
     queryKey: ["pdi_meus_beneficios_overrides"],
     queryFn: async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData.session?.user.id;
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
       if (!userId) return [];
 
-      const { data: colaborador, error: colError } = await supabase
+      const { data: colaborador } = await supabase
         .from("pdi_colaboradores")
         .select("id")
         .eq("user_id", userId)
         .maybeSingle();
 
-      if (colError || !colaborador) return [];
-
-      const { data, error } = await supabase
+      let query = supabase
         .from("pdi_colaborador_beneficios")
-        .select("beneficio_id, tipo")
-        .eq("colaborador_id", colaborador.id);
+        .select("beneficio_id, tipo");
 
+      if (colaborador) {
+        query = query.or(`user_id.eq.${userId},colaborador_id.eq.${colaborador.id}`);
+      } else {
+        query = query.eq("user_id", userId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },

@@ -7,13 +7,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Plus, Trash2 } from "lucide-react";
 import { useColaboradores } from "@beneficios/hooks/useColaboradores";
 import { useColaboradorOverrides } from "@beneficios/hooks/useColaboradorOverrides";
 import { useBeneficios } from "@beneficios/hooks/useBeneficios";
+import { useUsuariosParaBeneficios } from "@beneficios/hooks/useUsuariosParaBeneficios";
+
+type ModoAtribuicao = 'colaborador' | 'usuario';
 
 const ColaboradorOverridesPanel = () => {
+  const [modo, setModo] = useState<ModoAtribuicao>('colaborador');
   const [selectedColaboradorId, setSelectedColaboradorId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newBeneficioId, setNewBeneficioId] = useState<string>("");
@@ -21,18 +27,35 @@ const ColaboradorOverridesPanel = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const { colaboradores, isLoading: isLoadingColaboradores } = useColaboradores();
-  const { overrides, isLoadingOverrides, addOverride, removeOverride } = useColaboradorOverrides(selectedColaboradorId);
+  const { usuarios, isLoading: isLoadingUsuarios } = useUsuariosParaBeneficios();
+  const { overrides, isLoadingOverrides, addOverride, removeOverride } = useColaboradorOverrides(
+    modo === 'colaborador' ? selectedColaboradorId : null,
+    modo === 'usuario' ? selectedUserId : null
+  );
   const { beneficios, isLoading: isLoadingBeneficios } = useBeneficios();
 
   const filteredColaboradores = colaboradores.filter((c) =>
     c.nome.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const hasSelection = modo === 'colaborador' ? !!selectedColaboradorId : !!selectedUserId;
+
+  const handleModoChange = (novoModo: string) => {
+    setModo(novoModo as ModoAtribuicao);
+    setSelectedColaboradorId(null);
+    setSelectedUserId(null);
+    setSearchQuery("");
+  };
+
   const handleAddOverride = async () => {
-    if (!selectedColaboradorId || !newBeneficioId) return;
+    if (!hasSelection || !newBeneficioId) return;
     setIsSaving(true);
     try {
-      await addOverride({ colaboradorId: selectedColaboradorId, beneficioId: newBeneficioId, tipo: newTipo });
+      if (modo === 'colaborador') {
+        await addOverride({ colaboradorId: selectedColaboradorId!, beneficioId: newBeneficioId, tipo: newTipo });
+      } else {
+        await addOverride({ userId: selectedUserId!, beneficioId: newBeneficioId, tipo: newTipo });
+      }
       setAddDialogOpen(false);
       setNewBeneficioId("");
       setNewTipo('adicional');
@@ -51,50 +74,103 @@ const ColaboradorOverridesPanel = () => {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Overrides por Colaborador</CardTitle>
+          <CardTitle>Overrides por Colaborador / Usuário</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="busca-colaborador">Buscar colaborador</Label>
-            <Input
-              id="busca-colaborador"
-              placeholder="Buscar colaborador..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="flex gap-1 rounded-lg border p-1 bg-muted/40">
+            <Button
+              variant={modo === 'colaborador' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="flex-1"
+              onClick={() => handleModoChange('colaborador')}
+            >
+              Por Colaborador
+            </Button>
+            <Button
+              variant={modo === 'usuario' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="flex-1"
+              onClick={() => handleModoChange('usuario')}
+            >
+              Por Usuário
+            </Button>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="colaborador-select">Colaborador</Label>
-            {isLoadingColaboradores ? (
-              <Skeleton className="h-10 w-full" />
-            ) : (
-              <Select
-                value={selectedColaboradorId ?? ""}
-                onValueChange={(val) => setSelectedColaboradorId(val || null)}
-              >
-                <SelectTrigger id="colaborador-select">
-                  <SelectValue placeholder="Selecione um colaborador..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredColaboradores.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome}
-                    </SelectItem>
-                  ))}
-                  {filteredColaboradores.length === 0 && (
-                    <div className="py-2 px-3 text-sm text-muted-foreground">
-                      Nenhum colaborador encontrado
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+          {modo === 'colaborador' ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="busca-colaborador">Buscar colaborador</Label>
+                <Input
+                  id="busca-colaborador"
+                  placeholder="Buscar colaborador..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
 
-          {!selectedColaboradorId ? (
+              <div className="space-y-2">
+                <Label htmlFor="colaborador-select">Colaborador</Label>
+                {isLoadingColaboradores ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select
+                    value={selectedColaboradorId ?? ""}
+                    onValueChange={(val) => setSelectedColaboradorId(val || null)}
+                  >
+                    <SelectTrigger id="colaborador-select">
+                      <SelectValue placeholder="Selecione um colaborador..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredColaboradores.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.nome}
+                        </SelectItem>
+                      ))}
+                      {filteredColaboradores.length === 0 && (
+                        <div className="py-2 px-3 text-sm text-muted-foreground">
+                          Nenhum colaborador encontrado
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="usuario-select">Usuário</Label>
+              {isLoadingUsuarios ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <Select
+                  value={selectedUserId ?? ""}
+                  onValueChange={(val) => setSelectedUserId(val || null)}
+                >
+                  <SelectTrigger id="usuario-select">
+                    <SelectValue placeholder="Selecione um usuário..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {usuarios.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.nome}
+                      </SelectItem>
+                    ))}
+                    {usuarios.length === 0 && (
+                      <div className="py-2 px-3 text-sm text-muted-foreground">
+                        Nenhum usuário encontrado
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
+          {!hasSelection ? (
             <p className="text-sm text-muted-foreground">
-              Selecione um colaborador para gerenciar overrides
+              {modo === 'colaborador'
+                ? 'Selecione um colaborador para gerenciar overrides'
+                : 'Selecione um usuário para gerenciar overrides'}
             </p>
           ) : (
             <div className="space-y-3">
